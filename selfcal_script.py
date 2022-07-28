@@ -110,7 +110,10 @@ statfile=open(mvis+'_imstats1.txt', 'a')
 # set thesteps here (e.g. to only do band 6, do [0], 1
 # or in terminal mysteps=[0] etc. (will overrule thesteps)
 thesteps = []
-step_title = {4:'Get image statistics and predict gaincal solint',
+step_title = {0:'Concatenate and list',
+              1:'Print time on source, predicted sensitivity etc.',
+              3:'First continuum image',
+              4:'Get image statistics and predict gaincal solint',
               5:'First phase-only self-calibration, plotms solutions',
               6:'Apply calibration and re-image',
               7:'Next phase-only self-calibration, plotms solutions',
@@ -174,100 +177,100 @@ if (thesteps==[]):
 
 ##########
 
-# concatenate
-mystep = 0
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print( 'Step ', mystep, step_title[mystep])
-
-  os.system('rm -rf '+mvis)
-  concat(vis=msin,
-         concatvis=mvis,
-         freqtol='2MHz',
-         dirtol='1arcsec',
-         copypointing=False)
-
-
-  listobs(vis=mvis,
-          verbose=True,
-          overwrite=True,
-          listfile=mvis+'.listobs')
-
-# Print useful information
-mystep = 1
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print( 'Step ', mystep, step_title[mystep])
-
-  print('concatenated MS '+mvis)
-  print( 'Total line-free continuum %5.2f GHz' %(contGHz))
-  print( '\nTime on source (avg. per tuning)  %5.1f min' %(ToS))
-  # print( str(Nants)+'  antennas present (not necessarily in all spw).')
-  print( 'Predicted continuum rms  %5.3f mJy' %(predicted_rms_cont))
-  print( 'This will be set as "thresh", the continuum cleaning threshold.  \n**Change predicted_rms_cont as needed: higher in early stages or lower at the end for good conditions.\n\n')
-  print( 'Predicted line rms  %5.3f mJy' %(predicted_rms_line))
-  print( 'This will be set as "linethresh" for cube cleaning and automasking, tweak as needed.\n')
-
-  statfile.write('concatenated MS '+mvis+'\n')
-  statfile.write( 'Total line-free continuum %5.2f GHz\n' %(contGHz))
-  statfile.write( '\nTime on source (avg. per tuning)  %5.1f min\n' %(ToS))
-  statfile.write( str(Nants)+'  antennas present (not necessarily in all spw).\n')
-  statfile.write( 'Predicted continuum rms  %5.3f mJy\n' %(predicted_rms_cont))
-  statfile.write( 'Predicted line rms  %5.3f mJy\n' %(predicted_rms_line))
-
-# # Plot to check continuum selection
-# mystep = 2
+# # concatenate
+# mystep = 0
 # if(mystep in thesteps):
 #   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
 #   print( 'Step ', mystep, step_title[mystep])
 #
-#   chs=''
-#   if len(contchans) > 0:
-#       chs=contchans
+#   os.system('rm -rf '+mvis)
+#   concat(vis=msin,
+#          concatvis=mvis,
+#          freqtol='2MHz',
+#          dirtol='1arcsec',
+#          copypointing=False)
 #
-#   plotms(vis=mvis,
-#          xaxis='channel', yaxis='amp',
-#          spw=chs,
-#          avgtime='999999',
-#          avgscan=True,
-#          avgbaseline=True,
-#          coloraxis='observation',#showtsky=True,
-#          iteraxis='spw')
-
-
-# first image continuum
-mystep = 3
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print( 'Step ', mystep, step_title[mystep])
-
-  print('Stop cleaning when residual is all noise, maybe higher than threshold\n')
-
-  clearcal(vis=mvis,
-           addmodel=True)                             # **
-
-  os.system('rm -rf '+mvis+'_cont.clean*')
-  tclean(vis=mvis,
-         imagename=mvis+'_cont.clean',
-         spw=contchans,
-         imsize=imsz,
-         cell=cell,
-         weighting = 'briggs',
-         robust=0.5,
-         interactive=False,
-         perchanweightdensity=False,
-         threshold=thresh,
-         niter=150,
-         savemodel='modelcolumn',
-         parallel=True,
-         usemask=masktype,
-         sidelobethreshold=2.5,
-         noisethreshold=nthresh,
-         minbeamfrac=mbf,
-         lownoisethreshold=1.2,
-         growiterations=75)
-
-  print('Check in logger or by plotting that the model is saved.\n\n')
+#
+#   listobs(vis=mvis,
+#           verbose=True,
+#           overwrite=True,
+#           listfile=mvis+'.listobs')
+#
+# # Print useful information
+# mystep = 1
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print( 'Step ', mystep, step_title[mystep])
+#
+#   print('concatenated MS '+mvis)
+#   print( 'Total line-free continuum %5.2f GHz' %(contGHz))
+#   print( '\nTime on source (avg. per tuning)  %5.1f min' %(ToS))
+#   # print( str(Nants)+'  antennas present (not necessarily in all spw).')
+#   print( 'Predicted continuum rms  %5.3f mJy' %(predicted_rms_cont))
+#   print( 'This will be set as "thresh", the continuum cleaning threshold.  \n**Change predicted_rms_cont as needed: higher in early stages or lower at the end for good conditions.\n\n')
+#   print( 'Predicted line rms  %5.3f mJy' %(predicted_rms_line))
+#   print( 'This will be set as "linethresh" for cube cleaning and automasking, tweak as needed.\n')
+#
+#   statfile.write('concatenated MS '+mvis+'\n')
+#   statfile.write( 'Total line-free continuum %5.2f GHz\n' %(contGHz))
+#   statfile.write( '\nTime on source (avg. per tuning)  %5.1f min\n' %(ToS))
+#   statfile.write( str(Nants)+'  antennas present (not necessarily in all spw).\n')
+#   statfile.write( 'Predicted continuum rms  %5.3f mJy\n' %(predicted_rms_cont))
+#   statfile.write( 'Predicted line rms  %5.3f mJy\n' %(predicted_rms_line))
+#
+# # # Plot to check continuum selection
+# # mystep = 2
+# # if(mystep in thesteps):
+# #   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+# #   print( 'Step ', mystep, step_title[mystep])
+# #
+# #   chs=''
+# #   if len(contchans) > 0:
+# #       chs=contchans
+# #
+# #   plotms(vis=mvis,
+# #          xaxis='channel', yaxis='amp',
+# #          spw=chs,
+# #          avgtime='999999',
+# #          avgscan=True,
+# #          avgbaseline=True,
+# #          coloraxis='observation',#showtsky=True,
+# #          iteraxis='spw')
+#
+#
+# # first image continuum
+# mystep = 3
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print( 'Step ', mystep, step_title[mystep])
+#
+#   print('Stop cleaning when residual is all noise, maybe higher than threshold\n')
+#
+#   clearcal(vis=mvis,
+#            addmodel=True)                             # **
+#
+#   os.system('rm -rf '+mvis+'_cont.clean*')
+#   tclean(vis=mvis,
+#          imagename=mvis+'_cont.clean',
+#          spw=contchans,
+#          imsize=imsz,
+#          cell=cell,
+#          weighting = 'briggs',
+#          robust=0.5,
+#          interactive=False,
+#          perchanweightdensity=False,
+#          threshold=thresh,
+#          niter=150,
+#          savemodel='modelcolumn',
+#          parallel=True,
+#          usemask=masktype,
+#          sidelobethreshold=2.5,
+#          noisethreshold=nthresh,
+#          minbeamfrac=mbf,
+#          lownoisethreshold=1.2,
+#          growiterations=75)
+#
+#   print('Check in logger or by plotting that the model is saved.\n\n')
 
 # Stats and prediction
 mystep = 4
