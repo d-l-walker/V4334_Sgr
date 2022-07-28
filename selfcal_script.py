@@ -109,7 +109,7 @@ statfile=open(mvis+'_imstats1.txt', 'a')
 #
 # set thesteps here (e.g. to only do band 6, do [0], 1
 # or in terminal mysteps=[0] etc. (will overrule thesteps)
-thesteps = [1]
+# thesteps = [1]
 step_title = {0:'Concatenate and list',
               1:'Print time on source, predicted sensitivity etc.',
               3:'First continuum image',
@@ -124,7 +124,9 @@ step_title = {0:'Concatenate and list',
               13:'Make image cube',
               15: 'Export images to FITS format'}
 
-
+import sys
+import os
+sys.path.append("/raid/scratch/dwalker/analysis_scripts/")
 import analysisUtils as aU
 from os import write
 
