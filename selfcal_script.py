@@ -110,10 +110,7 @@ statfile=open(mvis+'_imstats1.txt', 'a')
 # set thesteps here (e.g. to only do band 6, do [0], 1
 # or in terminal mysteps=[0] etc. (will overrule thesteps)
 thesteps = []
-step_title = {0:'Concatenate and list',
-              1:'Print time on source, predicted sensitivity etc.',
-              3:'First continuum image',
-              4:'Get image statistics and predict gaincal solint',
+step_title = {4:'Get image statistics and predict gaincal solint',
               5:'First phase-only self-calibration, plotms solutions',
               6:'Apply calibration and re-image',
               7:'Next phase-only self-calibration, plotms solutions',
@@ -126,6 +123,7 @@ step_title = {0:'Concatenate and list',
 
 import sys
 import os
+import numpy as np
 sys.path.append("/raid/scratch/dwalker/analysis_scripts/")
 import analysisUtils as aU
 from os import write
@@ -204,7 +202,7 @@ if(mystep in thesteps):
   print('concatenated MS '+mvis)
   print( 'Total line-free continuum %5.2f GHz' %(contGHz))
   print( '\nTime on source (avg. per tuning)  %5.1f min' %(ToS))
-#  print( str(Nants)+'  antennas present (not necessarily in all spw).')
+  # print( str(Nants)+'  antennas present (not necessarily in all spw).')
   print( 'Predicted continuum rms  %5.3f mJy' %(predicted_rms_cont))
   print( 'This will be set as "thresh", the continuum cleaning threshold.  \n**Change predicted_rms_cont as needed: higher in early stages or lower at the end for good conditions.\n\n')
   print( 'Predicted line rms  %5.3f mJy' %(predicted_rms_line))
@@ -302,7 +300,7 @@ if(mystep in thesteps):
   fit=imfit(imagename=image1)['results']['component0']['shape']
   fitcenRA=fit['direction']['m0']['value']
   if fitcenRA < 0:
-      fitcenRA=fitcenRA+2.*pi
+      fitcenRA=fitcenRA+2.*np.pi
   fitcenDec=fit['direction']['m1']['value']
   fitcen='ICRS '+str(fitcenRA)+'rad  '+str(fitcenDec)+'rad'
   fitcenradec=aU.rad2radec(fitcenRA, fitcenDec)
