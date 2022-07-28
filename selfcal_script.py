@@ -18,20 +18,20 @@
 # 1) You might want solnorm=True in the 'a' gaincal as the final flux density
 #    and S/N is very slightly less than 'p' only
 #    - however, the spectral slope of the continuum is less wiggly.
-# 
-# 2) The different SG had somewhat different max baselines, hence different resolutions. 
-#    At present the final cube has restoringbeam = 'common' which forces it to the largest size present, 
-#    which at least means all the B6 have the same resolution - but you could force it to be a bit 
+#
+# 2) The different SG had somewhat different max baselines, hence different resolutions.
+#    At present the final cube has restoringbeam = 'common' which forces it to the largest size present,
+#    which at least means all the B6 have the same resolution - but you could force it to be a bit
 #    smaller if you wanted e.g. for consistently with B7
 #
 # 3) The automasking is quite cautious, you might want to reduce the thresholds a bit or otherwise make
-#    it more assertive . 
-#    Also, if you are doing it interactively, once the automasking residual is <~1 mJy, I suggest 
-#    masking the central ~1" for all planes manually, to pick up weak central emission.  
+#    it more assertive .
+#    Also, if you are doing it interactively, once the automasking residual is <~1 mJy, I suggest
+#    masking the central ~1" for all planes manually, to pick up weak central emission.
 #    If you restart tclean, set calcres=False, calcpsf=False.
 #
-############################################################## 
-# Check for best CASA version, currently /usr/local/casa-6.3.0-48/bin/casa 
+##############################################################
+# Check for best CASA version, currently /usr/local/casa-6.3.0-48/bin/casa
 
 # Please enter user-defined parameters (some already done):
 pth = '/raid/scratch/aaz/2021.1.00917.S/'
@@ -42,7 +42,7 @@ target='V4334_Sgr'
 msin=[pth+'Band_6/MSes/band_6_lower_half.s',pth+'Band_6/MSes/band_6_upper_half.ms']
 mvis=target+'_B6.ms'
 
-# Enter a list of refants, e.g. the first few in the pipeline priority lists for each dataset (weblog task hif_refant). 
+# Enter a list of refants, e.g. the first few in the pipeline priority lists for each dataset (weblog task hif_refant).
 antrefs='DA63, DA57, DV08, DV24'
 
 Nspw=40
@@ -74,15 +74,15 @@ contchans='17:0~88;101~112,19:0~123, 21:0~9;34~55;59~72;85~89;97~123, 23:0~17;38
 #mvis=target+'_B7.ms'
 #antrefs=''
 #contchans=''
-#rms_1_1 = 0.4  # mJy rms noise mid B7 for 1 GHz, 1 min. Dec -17 
+#rms_1_1 = 0.4  # mJy rms noise mid B7 for 1 GHz, 1 min. Dec -17
 #ToS= 150./10.   # 150 min over 10 tunings
 
 ##########################################
 # Parameters for all
 
 cell='0.05arcsec'
-R=0.5
-imsz=200
+R=0.75
+imsz=540
 contchwd=0.015626283 # GHz (in fact all channels, here)
 Ncorr = 2.           # 2 polarizations
 
@@ -99,20 +99,19 @@ thismask=''     # default name will be used but you can specify an existing mask
 nthresh=3.5     # rms multiplier for initial automasking
 mbf=0.3         # min beam fraction for automasking
 
-# open file to send continuum stats to. 
+# open file to send continuum stats to.
 statfile=open(mvis+'_imstats1.txt', 'a')
 
 #***
 # After each continuum imaging step (in the next or the same step) the script
 # writes the peak, rms, S/N to screen and to a text file target*_imstats.txt
 # This is cumulative including repeated steps so you can check for improvement.
-# 
+#
 # set thesteps here (e.g. to only do band 6, do [0], 1
 # or in terminal mysteps=[0] etc. (will overrule thesteps)
-thesteps = [1]    
+thesteps = [1]
 step_title = {0:'Concatenate and list',
               1:'Print time on source, predicted sensitivity etc.',
-              2:'Plotms to check continuum channel selection',
               3:'First continuum image',
               4:'Get image statistics and predict gaincal solint',
               5:'First phase-only self-calibration, plotms solutions',
@@ -121,7 +120,6 @@ step_title = {0:'Concatenate and list',
               8:'Apply calibration and re-image',
               9:'First amp self-calibration, plotms solutions',
               10:'Apply calibration and re-image',
-              11:'Check corrected continuum visibilities',
               12:'Subtract continuum and check line visibilities',
               13:'Make image cube',
               15: 'Export images to FITS format'}
@@ -155,11 +153,11 @@ if len(contchans) > 1:
 #      except NameError:
 #          ToS=aU.timeOnSource(msin[0],field=target,scienceSpwsOnly=True)[0]['minutes_on_source_with_latency'] # average time on target
       predicted_rms_cont=rms_1_1*(ToS*contGHz)**-0.5
-      predicted_rms_line = predicted_rms_cont*(float(ncontchan))**0.5 # potential sensitvity per chan 
-  
+      predicted_rms_line = predicted_rms_cont*(float(ncontchan))**0.5 # potential sensitvity per chan
+
 # Set thresholds for imaging
 if 'predicted_rms_cont' in locals():
-    thresh= '%2.3f mJy' %(predicted_rms_cont) 
+    thresh= '%2.3f mJy' %(predicted_rms_cont)
 
 if 'predicted_rms_line' in locals():
     linethresh= '%2.3f mJy' %(predicted_rms_line)
@@ -176,7 +174,7 @@ if (thesteps==[]):
 
 ##########
 
-# concatenate 
+# concatenate
 mystep = 0
 if(mystep in thesteps):
   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
@@ -188,7 +186,7 @@ if(mystep in thesteps):
          freqtol='2MHz',
          dirtol='1arcsec',
          copypointing=False)
- 
+
 
   listobs(vis=mvis,
           verbose=True,
@@ -208,7 +206,7 @@ if(mystep in thesteps):
   print( 'Predicted continuum rms  %5.3f mJy' %(predicted_rms_cont))
   print( 'This will be set as "thresh", the continuum cleaning threshold.  \n**Change predicted_rms_cont as needed: higher in early stages or lower at the end for good conditions.\n\n')
   print( 'Predicted line rms  %5.3f mJy' %(predicted_rms_line))
-  print( 'This will be set as "linethresh" for cube cleaning and automasking, tweak as needed.\n')  
+  print( 'This will be set as "linethresh" for cube cleaning and automasking, tweak as needed.\n')
 
   statfile.write('concatenated MS '+mvis+'\n')
   statfile.write( 'Total line-free continuum %5.2f GHz\n' %(contGHz))
@@ -217,27 +215,27 @@ if(mystep in thesteps):
   statfile.write( 'Predicted continuum rms  %5.3f mJy\n' %(predicted_rms_cont))
   statfile.write( 'Predicted line rms  %5.3f mJy\n' %(predicted_rms_line))
 
-# Plot to check continuum selection
-mystep = 2
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print( 'Step ', mystep, step_title[mystep])
+# # Plot to check continuum selection
+# mystep = 2
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print( 'Step ', mystep, step_title[mystep])
+#
+#   chs=''
+#   if len(contchans) > 0:
+#       chs=contchans
+#
+#   plotms(vis=mvis,
+#          xaxis='channel', yaxis='amp',
+#          spw=chs,
+#          avgtime='999999',
+#          avgscan=True,
+#          avgbaseline=True,
+#          coloraxis='observation',#showtsky=True,
+#          iteraxis='spw')
 
-  chs=''
-  if len(contchans) > 0:
-      chs=contchans
 
-  plotms(vis=mvis,
-         xaxis='channel', yaxis='amp',
-         spw=chs,
-         avgtime='999999',
-         avgscan=True,
-         avgbaseline=True,
-         coloraxis='observation',#showtsky=True,
-         iteraxis='spw')
-        
-
-# first image continuum 
+# first image continuum
 mystep = 3
 if(mystep in thesteps):
   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
@@ -259,7 +257,7 @@ if(mystep in thesteps):
          interactive=True,
          perchanweightdensity=False,
          threshold=thresh,
-         niter=150,                  
+         niter=150,
          savemodel='modelcolumn')
 
   print('Check in logger or by plotting that the model is saved.\n\n')
@@ -280,9 +278,9 @@ if(mystep in thesteps):
   print( 'You might want to reduce threshold if the rms is lower.')
 
   statfile.write('\n'+mvis+'_cont.clean.image\n')
-  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.)) 
+  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
   statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
-  
+
   N=float(Nants)
   minsol=60.*(3.*predicted_rms_cont/(peak*1000.))**2 *ToS*(N*(N-1)/(2*(N-3)))*Ncorr*float(Nspw)
   print( 'Minimum solint for S/N 3 per antenna, per spw, per polarization %5.1f sec' %(minsol) )
@@ -336,12 +334,12 @@ if(mystep in thesteps):
           refantmode='flex',
           calmode='p')
 
-  plotms(vis=mvis+'.p0',
-         xaxis='time',yaxis='phase',
-         xsharedaxis=True,xselfscale=True,
-         ysharedaxis=True,yselfscale=True,
-         gridrows=5,gridcols=2,
-         iteraxis='antenna')
+  # plotms(vis=mvis+'.p0',
+  #        xaxis='time',yaxis='phase',
+  #        xsharedaxis=True,xselfscale=True,
+  #        ysharedaxis=True,yselfscale=True,
+  #        gridrows=5,gridcols=2,
+  #        iteraxis='antenna')
 
 # applycal and re-image
 mystep = 6
@@ -359,8 +357,8 @@ if(mystep in thesteps):
 # Do not flag nor weight, to avoid a imperfect model biasing results
   applycal(vis=mvis,
            gaintable=mvis+'.p0',
-           applymode='calonly',  
-           calwt=False,             
+           applymode='calonly',
+           calwt=False,
            flagbackup=False)
 
   os.system('rm -rf '+mvis+'_contp0.clean*')
@@ -388,7 +386,7 @@ if(mystep in thesteps):
   print( 'You might want to reduce threshold if the rms is lower.')
 
   statfile.write('\n'+mvis+'_contp0.clean.image\n')
-  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.)) 
+  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
   statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
 
 ######################################
@@ -410,12 +408,12 @@ if(mystep in thesteps):
           refantmode='flex',
           calmode='p')
 
-  plotms(vis=mvis+'.p1',
-         xaxis='time',yaxis='phase',
-         xsharedaxis=True,xselfscale=True,
-         ysharedaxis=True,yselfscale=True,
-         gridrows=5,gridcols=2,
-         iteraxis='antenna')
+  # plotms(vis=mvis+'.p1',
+  #        xaxis='time',yaxis='phase',
+  #        xsharedaxis=True,xselfscale=True,
+  #        ysharedaxis=True,yselfscale=True,
+  #        gridrows=5,gridcols=2,
+  #        iteraxis='antenna')
 
 # applycal and re-image
 mystep = 8
@@ -426,8 +424,8 @@ if(mystep in thesteps):
 # Do not flag nor weight, to avoid a imperfect model biasing results
   applycal(vis=mvis,
            gaintable=[mvis+'.p0',mvis+'.p1'],
-           applymode='calonly',  
-           calwt=False,             
+           applymode='calonly',
+           calwt=False,
            flagbackup=False)
 
   os.system('rm -rf '+mvis+'_contp1.clean*')
@@ -455,7 +453,7 @@ if(mystep in thesteps):
   print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
 
   statfile.write('\n'+mvis+'_contp1.clean.image.tt0\n')
-  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.)) 
+  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
   statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
 
 ######################
@@ -476,12 +474,12 @@ if(mystep in thesteps):
           refantmode='flex',
           calmode='a')
 
-  plotms(vis=mvis+'.a1',
-         xaxis='time',yaxis='amp',
-         xsharedaxis=True,xselfscale=True,
-         ysharedaxis=True,yselfscale=True,
-         gridrows=5,gridcols=2,
-         iteraxis='antenna')
+  # plotms(vis=mvis+'.a1',
+  #        xaxis='time',yaxis='amp',
+  #        xsharedaxis=True,xselfscale=True,
+  #        ysharedaxis=True,yselfscale=True,
+  #        gridrows=5,gridcols=2,
+  #        iteraxis='antenna')
 
 # applycal and re-image
 mystep = 10
@@ -520,28 +518,28 @@ if(mystep in thesteps):
   print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
 
   statfile.write('\n'+mvis+'_contpa1.clean.image.tt0\n')
-  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.)) 
+  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
   statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
 
-# Check continuum selection,  no spw entirely flagged, corrected continuum slope more regular
-mystep = 11
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print( 'Step ', mystep, step_title[mystep])
+# # Check continuum selection,  no spw entirely flagged, corrected continuum slope more regular
+# mystep = 11
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print( 'Step ', mystep, step_title[mystep])
+#
+#   chs=''
+#   if len(contchans) > 0:
+#       chs=contchans
+#
+#   plotms(vis=mvis,
+#          xaxis='freq', yaxis='amp',
+#          ydatacolumn='corrected',
+#          spw=chs,
+#          avgtime='999999',
+#          avgscan=True,
+#          avgbaseline=True,
+#          coloraxis='spw')
 
-  chs=''
-  if len(contchans) > 0:
-      chs=contchans
-
-  plotms(vis=mvis,
-         xaxis='freq', yaxis='amp',
-         ydatacolumn='corrected',
-         spw=chs,
-         avgtime='999999',
-         avgscan=True,
-         avgbaseline=True,
-         coloraxis='spw')
-        
 # uvcontsub
 mystep = 12
 if(mystep in thesteps):
@@ -552,19 +550,19 @@ if(mystep in thesteps):
   os.system('rm -rf '+mvis+'.contsub.flagversions')
   mstransform(vis= mvis,
             douvcontsub=True,
-            reindex=False,    #*** CHECK WORKS should keep original spw numbering 
+            reindex=False,    #*** CHECK WORKS should keep original spw numbering
             outputvis=mvis+'.contsub',
             fitspw=contchans,
             fitorder=1)
 
-  plotms(vis=mvis+'.contsub',
-         xaxis='freq',
-         yaxis='amp',
-         ydatacolumn='corrected',
-         avgtime='999999',
-         avgscan=True,
-         avgbaseline=True,
-         coloraxis='spw')
+  # plotms(vis=mvis+'.contsub',
+  #        xaxis='freq',
+  #        yaxis='amp',
+  #        ydatacolumn='corrected',
+  #        avgtime='999999',
+  #        avgscan=True,
+  #        avgbaseline=True,
+  #        coloraxis='spw')
 
 # image cubes
 # might need to experiment with automasking and threshold...
@@ -599,12 +597,12 @@ if(mystep in thesteps):
          usemask=masktype,
          cycleniter=200,
          sidelobethreshold=2.5,     # increase for much bright emission
-         noisethreshold=nthresh,    # 
+         noisethreshold=nthresh,    #
          minbeamfrac=mbf,           #
          lownoisethreshold=1.2,     # increase for much bright emission
-         growiterations=40,         # for speed
+         growiterations=75,         # for speed
          threshold=linethresh,
-         niter=50000)               # increase if needed 
+         niter=50000)               # increase if needed
 
 
 
