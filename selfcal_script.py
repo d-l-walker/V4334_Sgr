@@ -91,9 +91,9 @@ Ncorr = 2.           # 2 polarizations
 
 spwsel=''    # to do all - if so, see parameters in step 13 to avoid excessively noisy or blank channels
                               # which bias automasking and beamsize **change for B7?
-spssel='21'  # comment out to do all or select test channel
+# spssel='21'  # comment out to do all or select test channel
      # One first to test, or '' to do all
-interact=True   # to check progress/tweak masks manually
+interact=False   # to check progress/tweak masks manually
 masktype='auto-multithresh' # 'automultithresh' for automasking or 'user' for mask named in mask parameter or default
 thismask=''     # default name will be used but you can specify an existing mask
 nthresh=3.5     # rms multiplier for initial automasking
@@ -254,11 +254,18 @@ if(mystep in thesteps):
          cell=cell,
          weighting = 'briggs',
          robust=0.5,
-         interactive=True,
+         interactive=False,
          perchanweightdensity=False,
          threshold=thresh,
          niter=150,
-         savemodel='modelcolumn')
+         savemodel='modelcolumn',
+         parallel=True,
+         usemask=masktype,
+         sidelobethreshold=2.5,
+         noisethreshold=nthresh,
+         minbeamfrac=mbf,
+         lownoisethreshold=1.2,
+         growiterations=75)
 
   print('Check in logger or by plotting that the model is saved.\n\n')
 
@@ -369,11 +376,19 @@ if(mystep in thesteps):
          cell=cell,
          weighting = 'briggs',
          robust=0.5,
-         interactive=True,
+         interactive=False,
          perchanweightdensity=False,
          threshold=thresh,
          niter=200,
-         savemodel='modelcolumn')
+         savemodel='modelcolumn',
+         parallel=True,
+         usemask=masktype,
+         sidelobethreshold=2.5,
+         noisethreshold=nthresh,
+         minbeamfrac=mbf,
+         lownoisethreshold=1.2,
+         growiterations=75)
+
 
   rms=imstat(imagename=mvis+'_contp0.clean.image',
              box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
@@ -437,11 +452,18 @@ if(mystep in thesteps):
          deconvolver='mtmfs', nterms=2,
          weighting = 'briggs',
          robust=0.5,
-         interactive=True,
+         interactive=False,
          perchanweightdensity=False,
          threshold=thresh,
          niter=300,
-         savemodel='modelcolumn')
+         savemodel='modelcolumn',
+         parallel=True,
+         usemask=masktype,
+         sidelobethreshold=2.5,
+         noisethreshold=nthresh,
+         minbeamfrac=mbf,
+         lownoisethreshold=1.2,
+         growiterations=75)
 
   rms=imstat(imagename=mvis+'_contp1.clean.image.tt0',
              box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
@@ -504,9 +526,16 @@ if(mystep in thesteps):
          deconvolver='mtmfs', nterms=2,
          weighting = 'briggs',
          robust=0.5,
-         interactive=True,
+         interactive=False,
          threshold=thresh,
-         niter=300)
+         niter=300,
+         parallel=True,
+         usemask=masktype,
+         sidelobethreshold=2.5,
+         noisethreshold=nthresh,
+         minbeamfrac=mbf,
+         lownoisethreshold=1.2,
+         growiterations=75)
 
   rms=imstat(imagename=mvis+'_contpa1.clean.image.tt0',
              box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
@@ -592,17 +621,18 @@ if(mystep in thesteps):
          weighting = 'briggs',
          robust=0.5,
          pbcor=True,
-         interactive=interact,
+         interactive=False,
          restoringbeam='common',    # otherwise differences between tunings.  Or can set explicitly
-         usemask=masktype,
          cycleniter=200,
+         usemask=masktype,
          sidelobethreshold=2.5,     # increase for much bright emission
          noisethreshold=nthresh,    #
          minbeamfrac=mbf,           #
          lownoisethreshold=1.2,     # increase for much bright emission
          growiterations=75,         # for speed
          threshold=linethresh,
-         niter=50000)               # increase if needed
+         niter=50000,
+         parallel=True)               # increase if needed
 
 
 
