@@ -39,7 +39,7 @@ target='V4334_Sgr'
 
 # Band 6
 
-msin=[pth+'Band_6/MSes/band_6_lower_half.s',pth+'Band_6/MSes/band_6_upper_half.ms']
+msin=[pth+'Band_6/MSes/band_6_lower_half.ms',pth+'Band_6/MSes/band_6_upper_half.ms']
 mvis=target+'_B6.ms'
 
 # Enter a list of refants, e.g. the first few in the pipeline priority lists for each dataset (weblog task hif_refant).
@@ -109,7 +109,7 @@ statfile=open(mvis+'_imstats1.txt', 'a')
 #
 # set thesteps here (e.g. to only do band 6, do [0], 1
 # or in terminal mysteps=[0] etc. (will overrule thesteps)
-# thesteps = [1]
+thesteps = []
 step_title = {0:'Concatenate and list',
               1:'Print time on source, predicted sensitivity etc.',
               3:'First continuum image',
@@ -204,7 +204,7 @@ if(mystep in thesteps):
   print('concatenated MS '+mvis)
   print( 'Total line-free continuum %5.2f GHz' %(contGHz))
   print( '\nTime on source (avg. per tuning)  %5.1f min' %(ToS))
-  print( str(Nants)+'  antennas present (not necessarily in all spw).')
+#  print( str(Nants)+'  antennas present (not necessarily in all spw).')
   print( 'Predicted continuum rms  %5.3f mJy' %(predicted_rms_cont))
   print( 'This will be set as "thresh", the continuum cleaning threshold.  \n**Change predicted_rms_cont as needed: higher in early stages or lower at the end for good conditions.\n\n')
   print( 'Predicted line rms  %5.3f mJy' %(predicted_rms_line))
