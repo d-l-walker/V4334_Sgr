@@ -112,7 +112,7 @@ statfile=open(mvis+'_imstats1.txt', 'a')
 thesteps = []
 step_title = {0:'Concatenate and list',
               1:'Print time on source, predicted sensitivity etc.',
-              2: ''
+              2: '',
               3:'First continuum image',
               4:'Get image statistics and predict gaincal solint',
               5:'First phase-only self-calibration, plotms solutions',
@@ -121,7 +121,7 @@ step_title = {0:'Concatenate and list',
               8:'Apply calibration and re-image',
               9:'First amp self-calibration, plotms solutions',
               10:'Apply calibration and re-image',
-              11: ''
+              11: '',
               12:'Subtract continuum and check line visibilities',
               13:'Make image cube'}
 
