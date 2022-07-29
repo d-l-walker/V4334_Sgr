@@ -121,8 +121,7 @@ step_title = {0:'Concatenate and list',
               9:'First amp self-calibration, plotms solutions',
               10:'Apply calibration and re-image',
               12:'Subtract continuum and check line visibilities',
-              13:'Make image cube',
-              15: 'Export images to FITS format'}
+              13:'Make image cube'}
 
 import sys
 import os
@@ -272,320 +271,320 @@ if (thesteps==[]):
 #
 #   print('Check in logger or by plotting that the model is saved.\n\n')
 
-# Stats and prediction
-mystep = 4
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print( 'Step ', mystep, step_title[mystep])
-
-  rms=imstat(imagename=mvis+'_cont.clean.image',
-             box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
-  peak=imstat(imagename=mvis+'_cont.clean.image',
-              box=str(0.25*imsz)+','+str(0.25*imsz)+','+str(0.75*imsz)+','+str(0.75*imsz))['max'][0]
-  print( mvis+'_cont.clean.image')
-  print( 'Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy' %(predicted_rms_cont, rms*1000.))
-  print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
-  print( 'You might want to reduce threshold if the rms is lower.')
-
-  statfile.write('\n'+mvis+'_cont.clean.image\n')
-  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
-  statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
-
-  N=float(Nants)
-  minsol=60.*(3.*predicted_rms_cont/(peak*1000.))**2 *ToS*(N*(N-1)/(2*(N-3)))*Ncorr*float(Nspw)
-  print( 'Minimum solint for S/N 3 per antenna, per spw, per polarization %5.1f sec' %(minsol) )
-  statfile.write( 'Minimum solint for S/N 3 per antenna, per spw, per polarization %5.1f sec\n' %(minsol) )
-
-  print( 'Note these values (also and enter solintp0, solintp1, solinta1 values in variables at start\n')
-  print( 'If min. solint is very short, start with a longer solint e.g. 60s, to refine model first\n')
-
-  image1=mvis+'_cont.clean.image'
-  fit=imfit(imagename=image1)['results']['component0']['shape']
-  fitcenRA=fit['direction']['m0']['value']
-  if fitcenRA < 0:
-      fitcenRA=fitcenRA+2.*np.pi
-  fitcenDec=fit['direction']['m1']['value']
-  fitcen='ICRS '+str(fitcenRA)+'rad  '+str(fitcenDec)+'rad'
-  fitcenradec=aU.rad2radec(fitcenRA, fitcenDec)
-  imcen=aU.rad2radec(imhead(image1,mode='get',hdkey='crval1')['value'], imhead(image1,mode='get',hdkey='crval2')['value'])
-#  fitcendegra= aU.rad2deg(fit['direction']['m0']['value'])
-#  if fitcendegra <0:
-#      fitcendegra=360.+fitcendegra
-
-# raoff=3600000.*degrees(fitcenRA-imhead(image1,mode='get',hdkey='crval1')['value'])*cos((fitcenDec+imhead(image1,mode='get',hdkey='crval2')['value'])/2)
-#  decoff=3600000.*degrees(fitcenDec-imhead(image1,mode='get',hdkey='crval2')['value'])
-
-  statfile.write( '\npeakpos = "'+fitcen+'"\n')
-  statfile.write( '='+imcen+'\n')
-#  statfile.write( 'Peak position - pointing centre = (%4.1f, %4.1f) mas' % (raoff, decoff))
-
-  print( 'peakpos = "'+fitcen+'"' )
-  print( '='+imcen+'\n')
-#  print( 'Peak position - pointing centre = (%4.1f, %4.1f) mas' % (raoff, decoff))
-
-
-# first phase self-cal
-mystep = 5
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print('Step ', mystep, step_title[mystep])
-
-#  ft(vis=mvis,
-#    model=target+'_'+config+'_cont.clean.model',
-#    usescratch=True)
-
-  os.system('rm -rf '+mvis+'.p0')
-  gaincal(vis=mvis,
-          field=target,
-          caltable=mvis+'.p0',
-          spw=contchans,
-          solint=solintp0,
-          refant=antrefs,
-          refantmode='flex',
-          calmode='p')
-
-  # plotms(vis=mvis+'.p0',
-  #        xaxis='time',yaxis='phase',
-  #        xsharedaxis=True,xselfscale=True,
-  #        ysharedaxis=True,yselfscale=True,
-  #        gridrows=5,gridcols=2,
-  #        iteraxis='antenna')
-
-# applycal and re-image
-mystep = 6
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print('Step ', mystep, step_title[mystep])
-
-# flag data seen to have bad solutions
-  flagdata(vis=mvis,
-           mode='manual',
-           antenna='DA50',
-           scan='48',
-           spw='17,19,21,23')
-
-# Do not flag nor weight, to avoid a imperfect model biasing results
-  applycal(vis=mvis,
-           gaintable=mvis+'.p0',
-           applymode='calonly',
-           calwt=False,
-           flagbackup=False)
-
-  os.system('rm -rf '+mvis+'_contp0.clean*')
-  tclean(vis=mvis,
-         imagename=mvis+'_contp0.clean',
-         spw=contchans,
-         imsize=imsz,
-         cell=cell,
-         weighting = 'briggs',
-         robust=0.5,
-         interactive=False,
-         perchanweightdensity=False,
-         threshold=thresh,
-         niter=200,
-         savemodel='modelcolumn',
-         parallel=True,
-         usemask=masktype,
-         sidelobethreshold=2.5,
-         noisethreshold=nthresh,
-         minbeamfrac=mbf,
-         lownoisethreshold=1.2,
-         growiterations=75)
-
-
-  rms=imstat(imagename=mvis+'_contp0.clean.image',
-             box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
-  peak=imstat(imagename=mvis+'_contp0.clean.image',
-              box=str(0.25*imsz)+','+str(0.25*imsz)+','+str(0.75*imsz)+','+str(0.75*imsz))['max'][0]
-
-  print(mvis+'_contp0.clean.image\n')
-  print( 'Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy' %(predicted_rms_cont, rms*1000.))
-  print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
-  print( 'You might want to reduce threshold if the rms is lower.')
-
-  statfile.write('\n'+mvis+'_contp0.clean.image\n')
-  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
-  statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
-
-######################################
-# second phase self-cal
-mystep = 7
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print('Step ', mystep, step_title[mystep])
-
-  os.system('rm -rf '+mvis+'.p1')
-  gaincal(vis=mvis,
-          field=target,
-          caltable=mvis+'.p1',
-          gaintable=mvis+'.p0',
-          gaintype='T',    # average polarisations to allow shorter solint
-          spw=contchans,
-          solint=solintp1,
-          refant=antrefs,
-          refantmode='flex',
-          calmode='p')
-
-  # plotms(vis=mvis+'.p1',
-  #        xaxis='time',yaxis='phase',
-  #        xsharedaxis=True,xselfscale=True,
-  #        ysharedaxis=True,yselfscale=True,
-  #        gridrows=5,gridcols=2,
-  #        iteraxis='antenna')
-
-# applycal and re-image
-mystep = 8
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print('Step ', mystep, step_title[mystep])
-
-# Do not flag nor weight, to avoid a imperfect model biasing results
-  applycal(vis=mvis,
-           gaintable=[mvis+'.p0',mvis+'.p1'],
-           applymode='calonly',
-           calwt=False,
-           flagbackup=False)
-
-  os.system('rm -rf '+mvis+'_contp1.clean*')
-  tclean(vis=mvis,
-         imagename=mvis+'_contp1.clean',
-         spw=contchans,
-         imsize=imsz,
-         cell=cell,
-         deconvolver='mtmfs', nterms=2,
-         weighting = 'briggs',
-         robust=0.5,
-         interactive=False,
-         perchanweightdensity=False,
-         threshold=thresh,
-         niter=300,
-         savemodel='modelcolumn',
-         parallel=True,
-         usemask=masktype,
-         sidelobethreshold=2.5,
-         noisethreshold=nthresh,
-         minbeamfrac=mbf,
-         lownoisethreshold=1.2,
-         growiterations=75)
-
-  rms=imstat(imagename=mvis+'_contp1.clean.image.tt0',
-             box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
-  peak=imstat(imagename=mvis+'_contp1.clean.image.tt0',
-              box=str(0.25*imsz)+','+str(0.25*imsz)+','+str(0.75*imsz)+','+str(0.75*imsz))['max'][0]
-
-  print(mvis+'_contp1.clean.image.tt0\n')
-  print( 'Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy' %(predicted_rms_cont, rms*1000.))
-  print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
-
-  statfile.write('\n'+mvis+'_contp1.clean.image.tt0\n')
-  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
-  statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
-
-######################
-# amp self-cal
-mystep = 9
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print('Step ', mystep, step_title[mystep])
-
-  os.system('rm -rf '+mvis+'.a1')
-  gaincal(vis=mvis,
-          field=target,
-          caltable=mvis+'.a1',
-          gaintable=[mvis+'.p0',mvis+'.p1'],
-          spw=contchans,
-          solint=solinta1,
-          refant=antrefs,
-          refantmode='flex',
-          calmode='a')
-
-  # plotms(vis=mvis+'.a1',
-  #        xaxis='time',yaxis='amp',
-  #        xsharedaxis=True,xselfscale=True,
-  #        ysharedaxis=True,yselfscale=True,
-  #        gridrows=5,gridcols=2,
-  #        iteraxis='antenna')
-
-# applycal and re-image
-mystep = 10
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print('Step ', mystep, step_title[mystep])
-
-  if not os.path.exists(mvis+'_prefinalapplycalwt'):
-      os.system('cp -r '+mvis+' '+mvis+'_prefinalapplycalwt')
-  applycal(vis=mvis,
-           gaintable=[mvis+'.p0',mvis+'.p1',mvis+'.a1'],
-           applymode='calonly')  # see notes at start
-#           calwt=False,          # see notes at start
-#           flagbackup=False)
-
-  os.system('rm -rf '+mvis+'_contpa1.clean*')
-  tclean(vis=mvis,
-         imagename=mvis+'_contpa1.clean',
-         spw=contchans,
-         imsize=imsz,
-         cell=cell,
-         deconvolver='mtmfs', nterms=2,
-         weighting = 'briggs',
-         robust=0.5,
-         interactive=False,
-         threshold=thresh,
-         niter=300,
-         parallel=True,
-         usemask=masktype,
-         sidelobethreshold=2.5,
-         noisethreshold=nthresh,
-         minbeamfrac=mbf,
-         lownoisethreshold=1.2,
-         growiterations=75)
-
-  rms=imstat(imagename=mvis+'_contpa1.clean.image.tt0',
-             box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
-  peak=imstat(imagename=mvis+'_contpa1.clean.image.tt0',
-              box=str(0.25*imsz)+','+str(0.25*imsz)+','+str(0.75*imsz)+','+str(0.75*imsz))['max'][0]
-
-  print(mvis+'_contpa1.clean.image.tt0\n')
-  print( 'Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy' %(predicted_rms_cont, rms*1000.))
-  print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
-
-  statfile.write('\n'+mvis+'_contpa1.clean.image.tt0\n')
-  statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
-  statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
-
-# # Check continuum selection,  no spw entirely flagged, corrected continuum slope more regular
-# mystep = 11
+# # Stats and prediction
+# mystep = 4
 # if(mystep in thesteps):
 #   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
 #   print( 'Step ', mystep, step_title[mystep])
 #
-#   chs=''
-#   if len(contchans) > 0:
-#       chs=contchans
+#   rms=imstat(imagename=mvis+'_cont.clean.image',
+#              box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
+#   peak=imstat(imagename=mvis+'_cont.clean.image',
+#               box=str(0.25*imsz)+','+str(0.25*imsz)+','+str(0.75*imsz)+','+str(0.75*imsz))['max'][0]
+#   print( mvis+'_cont.clean.image')
+#   print( 'Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy' %(predicted_rms_cont, rms*1000.))
+#   print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
+#   print( 'You might want to reduce threshold if the rms is lower.')
 #
-#   plotms(vis=mvis,
-#          xaxis='freq', yaxis='amp',
-#          ydatacolumn='corrected',
-#          spw=chs,
-#          avgtime='999999',
-#          avgscan=True,
-#          avgbaseline=True,
-#          coloraxis='spw')
-
-# uvcontsub
-mystep = 12
-if(mystep in thesteps):
-  casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
-  print('Step ', mystep, step_title[mystep])
-
-  os.system('rm -rf '+mvis+'.contsub')
-  os.system('rm -rf '+mvis+'.contsub.flagversions')
-  mstransform(vis= mvis,
-            douvcontsub=True,
-            reindex=False,    #*** CHECK WORKS should keep original spw numbering
-            outputvis=mvis+'.contsub',
-            fitspw=contchans,
-            fitorder=1)
+#   statfile.write('\n'+mvis+'_cont.clean.image\n')
+#   statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
+#   statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
+#
+#   N=float(Nants)
+#   minsol=60.*(3.*predicted_rms_cont/(peak*1000.))**2 *ToS*(N*(N-1)/(2*(N-3)))*Ncorr*float(Nspw)
+#   print( 'Minimum solint for S/N 3 per antenna, per spw, per polarization %5.1f sec' %(minsol) )
+#   statfile.write( 'Minimum solint for S/N 3 per antenna, per spw, per polarization %5.1f sec\n' %(minsol) )
+#
+#   print( 'Note these values (also and enter solintp0, solintp1, solinta1 values in variables at start\n')
+#   print( 'If min. solint is very short, start with a longer solint e.g. 60s, to refine model first\n')
+#
+#   image1=mvis+'_cont.clean.image'
+#   fit=imfit(imagename=image1)['results']['component0']['shape']
+#   fitcenRA=fit['direction']['m0']['value']
+#   if fitcenRA < 0:
+#       fitcenRA=fitcenRA+2.*np.pi
+#   fitcenDec=fit['direction']['m1']['value']
+#   fitcen='ICRS '+str(fitcenRA)+'rad  '+str(fitcenDec)+'rad'
+#   fitcenradec=aU.rad2radec(fitcenRA, fitcenDec)
+#   imcen=aU.rad2radec(imhead(image1,mode='get',hdkey='crval1')['value'], imhead(image1,mode='get',hdkey='crval2')['value'])
+# #  fitcendegra= aU.rad2deg(fit['direction']['m0']['value'])
+# #  if fitcendegra <0:
+# #      fitcendegra=360.+fitcendegra
+#
+# # raoff=3600000.*degrees(fitcenRA-imhead(image1,mode='get',hdkey='crval1')['value'])*cos((fitcenDec+imhead(image1,mode='get',hdkey='crval2')['value'])/2)
+# #  decoff=3600000.*degrees(fitcenDec-imhead(image1,mode='get',hdkey='crval2')['value'])
+#
+#   statfile.write( '\npeakpos = "'+fitcen+'"\n')
+#   statfile.write( '='+imcen+'\n')
+# #  statfile.write( 'Peak position - pointing centre = (%4.1f, %4.1f) mas' % (raoff, decoff))
+#
+#   print( 'peakpos = "'+fitcen+'"' )
+#   print( '='+imcen+'\n')
+# #  print( 'Peak position - pointing centre = (%4.1f, %4.1f) mas' % (raoff, decoff))
+#
+#
+# # first phase self-cal
+# mystep = 5
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print('Step ', mystep, step_title[mystep])
+#
+# #  ft(vis=mvis,
+# #    model=target+'_'+config+'_cont.clean.model',
+# #    usescratch=True)
+#
+#   os.system('rm -rf '+mvis+'.p0')
+#   gaincal(vis=mvis,
+#           field=target,
+#           caltable=mvis+'.p0',
+#           spw=contchans,
+#           solint=solintp0,
+#           refant=antrefs,
+#           refantmode='flex',
+#           calmode='p')
+#
+#   # plotms(vis=mvis+'.p0',
+#   #        xaxis='time',yaxis='phase',
+#   #        xsharedaxis=True,xselfscale=True,
+#   #        ysharedaxis=True,yselfscale=True,
+#   #        gridrows=5,gridcols=2,
+#   #        iteraxis='antenna')
+#
+# # applycal and re-image
+# mystep = 6
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print('Step ', mystep, step_title[mystep])
+#
+# # flag data seen to have bad solutions
+#   flagdata(vis=mvis,
+#            mode='manual',
+#            antenna='DA50',
+#            scan='48',
+#            spw='17,19,21,23')
+#
+# # Do not flag nor weight, to avoid a imperfect model biasing results
+#   applycal(vis=mvis,
+#            gaintable=mvis+'.p0',
+#            applymode='calonly',
+#            calwt=False,
+#            flagbackup=False)
+#
+#   os.system('rm -rf '+mvis+'_contp0.clean*')
+#   tclean(vis=mvis,
+#          imagename=mvis+'_contp0.clean',
+#          spw=contchans,
+#          imsize=imsz,
+#          cell=cell,
+#          weighting = 'briggs',
+#          robust=0.5,
+#          interactive=False,
+#          perchanweightdensity=False,
+#          threshold=thresh,
+#          niter=200,
+#          savemodel='modelcolumn',
+#          parallel=True,
+#          usemask=masktype,
+#          sidelobethreshold=2.5,
+#          noisethreshold=nthresh,
+#          minbeamfrac=mbf,
+#          lownoisethreshold=1.2,
+#          growiterations=75)
+#
+#
+#   rms=imstat(imagename=mvis+'_contp0.clean.image',
+#              box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
+#   peak=imstat(imagename=mvis+'_contp0.clean.image',
+#               box=str(0.25*imsz)+','+str(0.25*imsz)+','+str(0.75*imsz)+','+str(0.75*imsz))['max'][0]
+#
+#   print(mvis+'_contp0.clean.image\n')
+#   print( 'Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy' %(predicted_rms_cont, rms*1000.))
+#   print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
+#   print( 'You might want to reduce threshold if the rms is lower.')
+#
+#   statfile.write('\n'+mvis+'_contp0.clean.image\n')
+#   statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
+#   statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
+#
+# ######################################
+# # second phase self-cal
+# mystep = 7
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print('Step ', mystep, step_title[mystep])
+#
+#   os.system('rm -rf '+mvis+'.p1')
+#   gaincal(vis=mvis,
+#           field=target,
+#           caltable=mvis+'.p1',
+#           gaintable=mvis+'.p0',
+#           gaintype='T',    # average polarisations to allow shorter solint
+#           spw=contchans,
+#           solint=solintp1,
+#           refant=antrefs,
+#           refantmode='flex',
+#           calmode='p')
+#
+#   # plotms(vis=mvis+'.p1',
+#   #        xaxis='time',yaxis='phase',
+#   #        xsharedaxis=True,xselfscale=True,
+#   #        ysharedaxis=True,yselfscale=True,
+#   #        gridrows=5,gridcols=2,
+#   #        iteraxis='antenna')
+#
+# # applycal and re-image
+# mystep = 8
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print('Step ', mystep, step_title[mystep])
+#
+# # Do not flag nor weight, to avoid a imperfect model biasing results
+#   applycal(vis=mvis,
+#            gaintable=[mvis+'.p0',mvis+'.p1'],
+#            applymode='calonly',
+#            calwt=False,
+#            flagbackup=False)
+#
+#   os.system('rm -rf '+mvis+'_contp1.clean*')
+#   tclean(vis=mvis,
+#          imagename=mvis+'_contp1.clean',
+#          spw=contchans,
+#          imsize=imsz,
+#          cell=cell,
+#          deconvolver='mtmfs', nterms=2,
+#          weighting = 'briggs',
+#          robust=0.5,
+#          interactive=False,
+#          perchanweightdensity=False,
+#          threshold=thresh,
+#          niter=300,
+#          savemodel='modelcolumn',
+#          parallel=True,
+#          usemask=masktype,
+#          sidelobethreshold=2.5,
+#          noisethreshold=nthresh,
+#          minbeamfrac=mbf,
+#          lownoisethreshold=1.2,
+#          growiterations=75)
+#
+#   rms=imstat(imagename=mvis+'_contp1.clean.image.tt0',
+#              box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
+#   peak=imstat(imagename=mvis+'_contp1.clean.image.tt0',
+#               box=str(0.25*imsz)+','+str(0.25*imsz)+','+str(0.75*imsz)+','+str(0.75*imsz))['max'][0]
+#
+#   print(mvis+'_contp1.clean.image.tt0\n')
+#   print( 'Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy' %(predicted_rms_cont, rms*1000.))
+#   print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
+#
+#   statfile.write('\n'+mvis+'_contp1.clean.image.tt0\n')
+#   statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
+#   statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
+#
+# ######################
+# # amp self-cal
+# mystep = 9
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print('Step ', mystep, step_title[mystep])
+#
+#   os.system('rm -rf '+mvis+'.a1')
+#   gaincal(vis=mvis,
+#           field=target,
+#           caltable=mvis+'.a1',
+#           gaintable=[mvis+'.p0',mvis+'.p1'],
+#           spw=contchans,
+#           solint=solinta1,
+#           refant=antrefs,
+#           refantmode='flex',
+#           calmode='a')
+#
+#   # plotms(vis=mvis+'.a1',
+#   #        xaxis='time',yaxis='amp',
+#   #        xsharedaxis=True,xselfscale=True,
+#   #        ysharedaxis=True,yselfscale=True,
+#   #        gridrows=5,gridcols=2,
+#   #        iteraxis='antenna')
+#
+# # applycal and re-image
+# mystep = 10
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print('Step ', mystep, step_title[mystep])
+#
+#   if not os.path.exists(mvis+'_prefinalapplycalwt'):
+#       os.system('cp -r '+mvis+' '+mvis+'_prefinalapplycalwt')
+#   applycal(vis=mvis,
+#            gaintable=[mvis+'.p0',mvis+'.p1',mvis+'.a1'],
+#            applymode='calonly')  # see notes at start
+# #           calwt=False,          # see notes at start
+# #           flagbackup=False)
+#
+#   os.system('rm -rf '+mvis+'_contpa1.clean*')
+#   tclean(vis=mvis,
+#          imagename=mvis+'_contpa1.clean',
+#          spw=contchans,
+#          imsize=imsz,
+#          cell=cell,
+#          deconvolver='mtmfs', nterms=2,
+#          weighting = 'briggs',
+#          robust=0.5,
+#          interactive=False,
+#          threshold=thresh,
+#          niter=300,
+#          parallel=True,
+#          usemask=masktype,
+#          sidelobethreshold=2.5,
+#          noisethreshold=nthresh,
+#          minbeamfrac=mbf,
+#          lownoisethreshold=1.2,
+#          growiterations=75)
+#
+#   rms=imstat(imagename=mvis+'_contpa1.clean.image.tt0',
+#              box='10,10,'+str(imsz-10)+','+str(0.2*imsz))['rms'][0]
+#   peak=imstat(imagename=mvis+'_contpa1.clean.image.tt0',
+#               box=str(0.25*imsz)+','+str(0.25*imsz)+','+str(0.75*imsz)+','+str(0.75*imsz))['max'][0]
+#
+#   print(mvis+'_contpa1.clean.image.tt0\n')
+#   print( 'Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy' %(predicted_rms_cont, rms*1000.))
+#   print( 'Continuum peak  %5.3f mJy; S/N %5i' %(peak*1000., peak/rms))
+#
+#   statfile.write('\n'+mvis+'_contpa1.clean.image.tt0\n')
+#   statfile.write('Predicted continuum rms  %5.3f mJy; achieved %5.3f mJy\n' %(predicted_rms_cont, rms*1000.))
+#   statfile.write('Continuum peak  %5.3f mJy; S/N %5i\n' %(peak*1000., peak/rms))
+#
+# # # Check continuum selection,  no spw entirely flagged, corrected continuum slope more regular
+# # mystep = 11
+# # if(mystep in thesteps):
+# #   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+# #   print( 'Step ', mystep, step_title[mystep])
+# #
+# #   chs=''
+# #   if len(contchans) > 0:
+# #       chs=contchans
+# #
+# #   plotms(vis=mvis,
+# #          xaxis='freq', yaxis='amp',
+# #          ydatacolumn='corrected',
+# #          spw=chs,
+# #          avgtime='999999',
+# #          avgscan=True,
+# #          avgbaseline=True,
+# #          coloraxis='spw')
+#
+# # uvcontsub
+# mystep = 12
+# if(mystep in thesteps):
+#   casalog.post('Step '+str(mystep)+' '+step_title[mystep],'INFO')
+#   print('Step ', mystep, step_title[mystep])
+#
+#   os.system('rm -rf '+mvis+'.contsub')
+#   os.system('rm -rf '+mvis+'.contsub.flagversions')
+#   mstransform(vis= mvis,
+#             douvcontsub=True,
+#             reindex=False,    #*** CHECK WORKS should keep original spw numbering
+#             outputvis=mvis+'.contsub',
+#             fitspw=contchans,
+#             fitorder=1)
 
   # plotms(vis=mvis+'.contsub',
   #        xaxis='freq',
